@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "portable_supply:block/portable_fluid_source"
+    }
+  }
+}

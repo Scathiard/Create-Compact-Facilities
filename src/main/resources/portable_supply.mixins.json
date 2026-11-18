@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.scathiard.portablesupply.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "SpoutFillingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
