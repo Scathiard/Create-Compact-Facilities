@@ -1,0 +1,12 @@
+.gradle/
+build/
+run/
+work/
+release/
+docs/
+art/
+AGENTS.md
+.idea/
+.vscode/
+*.iml
+*.log
