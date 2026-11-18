@@ -1,0 +1,2 @@
+src/main/resources/** text=auto eol=lf
+src/main/resources/**/*.png -text
