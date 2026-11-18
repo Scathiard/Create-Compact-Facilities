@@ -1,0 +1,9 @@
+{
+  "item.portable_supply.portable_fluid_source_blank": "Portable Fluid Source Blank",
+  "item.portable_supply.incomplete_portable_fluid_source": "Incomplete Portable Fluid Source",
+  "block.portable_supply.portable_fluid_source": "Portable Fluid Source",
+  "tooltip.portable_supply.blank": "The first bucket binds a bottomless-compatible fluid. Water takes three buckets in total.",
+  "tooltip.portable_supply.unbound": "No fluid bound",
+  "tooltip.portable_supply.fluid": "Fluid: %s",
+  "tooltip.portable_supply.progress": "Fills: %1$s / %2$s"
+}

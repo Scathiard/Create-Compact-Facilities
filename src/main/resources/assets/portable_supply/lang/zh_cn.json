@@ -1,9 +1,0 @@
-{
-  "item.portable_supply.portable_fluid_source_blank": "便携流体源毛坯",
-  "item.portable_supply.incomplete_portable_fluid_source": "未完成的便携流体源",
-  "block.portable_supply.portable_fluid_source": "便携流体源",
-  "tooltip.portable_supply.blank": "用注液器每次注入一桶可无限抽取的流体。首次注液锁定种类。",
-  "tooltip.portable_supply.unbound": "尚未绑定流体",
-  "tooltip.portable_supply.fluid": "流体：%s",
-  "tooltip.portable_supply.progress": "注液进度：%1$s / %2$s"
-}

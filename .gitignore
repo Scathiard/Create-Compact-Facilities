@@ -1,7 +1,7 @@
 .gradle/
 build/
 run/
-work/
+/work/tmp/
 release/
 docs/
 art/
