@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "create:fluid_tank"
+    },
+    {
+      "item": "create:hose_pulley"
+    }
+  ],
+  "result": {
+    "id": "canned_facilities:canned_fluid_source_blank",
+    "count": 1
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "canned_facilities:block/canned_fluid_source"
+    }
+  }
+}

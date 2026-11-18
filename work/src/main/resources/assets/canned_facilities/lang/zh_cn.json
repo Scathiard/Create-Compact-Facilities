@@ -1,0 +1,9 @@
+{
+  "item.canned_facilities.canned_fluid_source_blank": "罐装流体源毛坯",
+  "item.canned_facilities.incomplete_canned_fluid_source": "未完成的罐装流体源",
+  "block.canned_facilities.canned_fluid_source": "罐装流体源",
+  "tooltip.canned_facilities.blank": "用注液器逐桶注入可无限抽取的流体。首桶锁定种类，水共需三桶。",
+  "tooltip.canned_facilities.unbound": "尚未绑定流体",
+  "tooltip.canned_facilities.fluid": "流体：%s",
+  "tooltip.canned_facilities.progress": "注液进度：%1$s / %2$s"
+}

@@ -3,9 +3,9 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.107'
 }
 
-group = 'dev.scathiard.portablesupply'
+group = 'dev.scathiard.cannedfacilities'
 version = mod_version
-base.archivesName = 'create-portable-supply'
+base.archivesName = 'create-canned-facilities'
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 
@@ -34,7 +34,7 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 def testModJar = tasks.register('testModJar', Jar) {
-    archiveBaseName = 'portable-supply-verification'
+    archiveBaseName = 'canned-facilities-verification'
     destinationDirectory = layout.buildDirectory.dir('verification')
     from sourceSets.gameTest.output
 }
@@ -65,29 +65,29 @@ neoForge {
         client {
             client()
             gameDirectory = file("${gameRoot}/client")
-            systemProperty 'portable_supply.clientSmoke', String.valueOf(clientSmoke)
+            systemProperty 'canned_facilities.clientSmoke', String.valueOf(clientSmoke)
             if (clientSmoke) programArguments.addAll('--width', '1152', '--height', '720')
         }
         gameTestServer {
             type = 'gameTestServer'
             gameDirectory = file("${gameRoot}/gametest")
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'portable_supply_test'
-            systemProperty 'portable_supply.fullCostTest', String.valueOf(providers.gradleProperty('fullCostTest').isPresent())
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'canned_facilities_test'
+            systemProperty 'canned_facilities.fullCostTest', String.valueOf(providers.gradleProperty('fullCostTest').isPresent())
         }
         configureEach {
             jvmArgument '-Djava.io.tmpdir=' + System.getProperty('java.io.tmpdir')
-            systemProperty 'portable_supply.verifyJar', String.valueOf(packagedTest)
+            systemProperty 'canned_facilities.verifyJar', String.valueOf(packagedTest)
         }
     }
     mods {
         if (!packagedTest) {
-            portable_supply { sourceSet sourceSets.main }
-            portable_supply_test { sourceSet sourceSets.gameTest }
+            canned_facilities { sourceSet sourceSets.main }
+            canned_facilities_test { sourceSet sourceSets.gameTest }
         }
     }
 }
 
-tasks.named('processResources') {
+tasks.withType(ProcessResources).configureEach {
     inputs.property 'modVersion', project.version
     filesMatching('META-INF/neoforge.mods.toml') { expand modVersion: project.version }
 }

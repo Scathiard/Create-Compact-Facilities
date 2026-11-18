@@ -1,0 +1,13 @@
+{
+  "parent": "minecraft:block/cube",
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "particle": "#north",
+    "north": "canned_facilities:block/copper_glass_casing",
+    "south": "#north",
+    "west": "canned_facilities:block/canned_fluid_source_side",
+    "east": "#west",
+    "up": "canned_facilities:block/canned_fluid_source_top",
+    "down": "create:block/encased_pipe"
+  }
+}
