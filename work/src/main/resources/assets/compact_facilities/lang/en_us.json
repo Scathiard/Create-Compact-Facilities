@@ -1,0 +1,9 @@
+{
+  "item.compact_facilities.compact_fluid_source_blank": "Compact Fluid Source Blank",
+  "item.compact_facilities.incomplete_compact_fluid_source": "Incomplete Compact Fluid Source",
+  "block.compact_facilities.compact_fluid_source": "Compact Fluid Source",
+  "tooltip.compact_facilities.blank": "The first bucket binds a bottomless-compatible fluid. Water takes three buckets in total.",
+  "tooltip.compact_facilities.unbound": "No fluid bound",
+  "tooltip.compact_facilities.fluid": "Fluid: %s",
+  "tooltip.compact_facilities.progress": "Fills: %1$s / %2$s"
+}

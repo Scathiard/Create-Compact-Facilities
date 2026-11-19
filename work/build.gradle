@@ -3,9 +3,9 @@ plugins {
     id 'net.neoforged.moddev' version '2.0.107'
 }
 
-group = 'dev.scathiard.cannedfacilities'
+group = 'dev.scathiard.compactfacilities'
 version = mod_version
-base.archivesName = 'create-canned-facilities'
+base.archivesName = 'create-compact-facilities'
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 
@@ -34,7 +34,7 @@ configurations {
     runtimeClasspath.extendsFrom localRuntime
 }
 def testModJar = tasks.register('testModJar', Jar) {
-    archiveBaseName = 'canned-facilities-verification'
+    archiveBaseName = 'compact-facilities-verification'
     destinationDirectory = layout.buildDirectory.dir('verification')
     from sourceSets.gameTest.output
 }
@@ -65,24 +65,24 @@ neoForge {
         client {
             client()
             gameDirectory = file("${gameRoot}/client")
-            systemProperty 'canned_facilities.clientSmoke', String.valueOf(clientSmoke)
+            systemProperty 'compact_facilities.clientSmoke', String.valueOf(clientSmoke)
             if (clientSmoke) programArguments.addAll('--width', '1152', '--height', '720')
         }
         gameTestServer {
             type = 'gameTestServer'
             gameDirectory = file("${gameRoot}/gametest")
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'canned_facilities_test'
-            systemProperty 'canned_facilities.fullCostTest', String.valueOf(providers.gradleProperty('fullCostTest').isPresent())
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'compact_facilities_test'
+            systemProperty 'compact_facilities.fullCostTest', String.valueOf(providers.gradleProperty('fullCostTest').isPresent())
         }
         configureEach {
             jvmArgument '-Djava.io.tmpdir=' + System.getProperty('java.io.tmpdir')
-            systemProperty 'canned_facilities.verifyJar', String.valueOf(packagedTest)
+            systemProperty 'compact_facilities.verifyJar', String.valueOf(packagedTest)
         }
     }
     mods {
         if (!packagedTest) {
-            canned_facilities { sourceSet sourceSets.main }
-            canned_facilities_test { sourceSet sourceSets.gameTest }
+            compact_facilities { sourceSet sourceSets.main }
+            compact_facilities_test { sourceSet sourceSets.gameTest }
         }
     }
 }

@@ -3,30 +3,30 @@ loaderVersion = "[4,)"
 license = "All Rights Reserved except where separately noted."
 
 [[mods]]
-modId = "canned_facilities"
+modId = "compact_facilities"
 version = "${modVersion}"
-displayName = "Create: Canned Facilities"
+displayName = "Create: Compact Facilities"
 authors = "Scathiard"
 description = "Compress a bottomless fluid source into a single block using Create's spout."
 
 [[mixins]]
-config = "canned_facilities.mixins.json"
+config = "compact_facilities.mixins.json"
 
-[[dependencies.canned_facilities]]
+[[dependencies.compact_facilities]]
 modId = "neoforge"
 type = "required"
 versionRange = "[21.1.219,21.2)"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.canned_facilities]]
+[[dependencies.compact_facilities]]
 modId = "minecraft"
 type = "required"
 versionRange = "[1.21.1]"
 ordering = "NONE"
 side = "BOTH"
 
-[[dependencies.canned_facilities]]
+[[dependencies.compact_facilities]]
 modId = "create"
 type = "required"
 versionRange = "[6.0.10,6.1)"

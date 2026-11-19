@@ -1,0 +1,15 @@
+{
+  "parent": "minecraft:recipes/root",
+  "criteria": {
+    "has_tank": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": { "items": [{ "items": "create:fluid_tank" }] }
+    },
+    "has_recipe": {
+      "trigger": "minecraft:recipe_unlocked",
+      "conditions": { "recipe": "compact_facilities:compact_fluid_source_blank" }
+    }
+  },
+  "requirements": [["has_tank", "has_recipe"]],
+  "rewards": { "recipes": ["compact_facilities:compact_fluid_source_blank"] }
+}

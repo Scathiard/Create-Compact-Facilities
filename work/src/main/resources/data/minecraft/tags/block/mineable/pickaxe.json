@@ -1,6 +1,6 @@
 {
   "replace": false,
   "values": [
-    "canned_facilities:canned_fluid_source"
+    "compact_facilities:compact_fluid_source"
   ]
 }

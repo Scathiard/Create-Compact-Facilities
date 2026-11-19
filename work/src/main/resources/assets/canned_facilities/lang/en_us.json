@@ -1,9 +1,0 @@
-{
-  "item.canned_facilities.canned_fluid_source_blank": "Canned Fluid Source Blank",
-  "item.canned_facilities.incomplete_canned_fluid_source": "Incomplete Canned Fluid Source",
-  "block.canned_facilities.canned_fluid_source": "Canned Fluid Source",
-  "tooltip.canned_facilities.blank": "The first bucket binds a bottomless-compatible fluid. Water takes three buckets in total.",
-  "tooltip.canned_facilities.unbound": "No fluid bound",
-  "tooltip.canned_facilities.fluid": "Fluid: %s",
-  "tooltip.canned_facilities.progress": "Fills: %1$s / %2$s"
-}

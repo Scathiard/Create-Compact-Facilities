@@ -1,4 +1,4 @@
 pluginManagement {
     repositories { gradlePluginPortal() }
 }
-rootProject.name = 'create-canned-facilities'
+rootProject.name = 'create-compact-facilities'
