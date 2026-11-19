@@ -21,7 +21,7 @@ public final class FluidSourceFilling {
 
     public static boolean allowed(Fluid fluid) {
         var settings = AllConfigs.server().fluids;
-        if (settings.hosePulleyBlockThreshold.get() < 0 || !settings.bottomlessFluidMode.get().test(fluid)) return false;
+        if (settings.hosePulleyBlockThreshold.get() < 0) return false;
         var placed = fluid.defaultFluidState().createLegacyBlock().getFluidState();
         return placed.isSource() && fluid.isSame(placed.getType());
     }

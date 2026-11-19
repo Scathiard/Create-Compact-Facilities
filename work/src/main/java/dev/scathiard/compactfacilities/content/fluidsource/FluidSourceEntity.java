@@ -73,10 +73,14 @@ public final class FluidSourceEntity extends BlockEntity implements IHaveGoggleI
     @Override
     protected void applyImplicitComponents(DataComponentInput input) {
         super.applyImplicitComponents(input);
-        var incoming = input.get(ModDataComponents.FLUID_SOURCE_CHARGE.get());
         charge = null;
+        setCharge(input.get(ModDataComponents.FLUID_SOURCE_CHARGE.get()));
+    }
+
+    boolean setCharge(@Nullable FluidSourceCharge incoming) {
         pendingCharge = null;
         if (incoming == null) {
+            charge = null;
             storedCharge = null;
         } else if (incoming.complete()) {
             pendingCharge = incoming;
@@ -88,6 +92,7 @@ public final class FluidSourceEntity extends BlockEntity implements IHaveGoggleI
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), Block.UPDATE_CLIENTS);
         }
+        return charge == incoming;
     }
 
     @Override

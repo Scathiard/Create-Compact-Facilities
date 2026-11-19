@@ -11,8 +11,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
 
 import java.util.List;
 
@@ -25,40 +23,38 @@ final class CreativeTabChecks {
         var tab = ModCreativeContents.MAIN.get();
         boolean chinese = language.equals("zh_cn");
         require(tab.getDisplayName().getString().equals(chinese ? "机械动力：紧凑设施" : "Create: Compact Facilities"), "Incorrect creative tab title");
-        checkFilled(tab.getIconItem(), Fluids.LAVA);
+        checkUnbound(tab.getIconItem());
 
         select(screen, tab);
         var items = List.copyOf(screen.getMenu().items);
-        require(items.size() == 3 && items.getFirst().is(ModItems.FLUID_SOURCE_BLANK.get())
+        require(items.size() == 2 && items.getFirst().is(ModItems.FLUID_SOURCE_BLANK.get())
             && !items.getFirst().has(ModDataComponents.FLUID_SOURCE_CHARGE), "Expected the empty source first");
-        checkFilled(items.get(1), Fluids.WATER);
-        checkFilled(items.get(2), Fluids.LAVA);
+        checkUnbound(items.get(1));
         var ingredients = BuiltInRegistries.CREATIVE_MODE_TAB.get(CreativeModeTabs.INGREDIENTS);
         require(items.stream().noneMatch(ingredients::contains), "Sources duplicated in vanilla Ingredients");
 
-        for (int i = 1; i <= 2; i++) {
+        for (int i = 0; i < items.size(); i++) {
             clickSlot(screen, i);
-            require(ItemStack.isSameItemSameComponents(screen.getMenu().getCarried(), items.get(i)), "Creative pickup lost its fluid binding");
-            clickSlot(screen, 3);
+            require(ItemStack.isSameItemSameComponents(screen.getMenu().getCarried(), items.get(i)), "Creative pickup differs from its tab entry");
+            clickSlot(screen, items.size());
             require(screen.getMenu().getCarried().isEmpty(), "Expected an empty cursor");
         }
         select(screen, CreativeModeTabs.searchTab());
         String query = chinese ? "紧凑流体源" : "Compact Fluid Source";
         for (char letter : query.toCharArray()) screen.charTyped(letter, 0);
         var results = screen.getMenu().items;
-        require(results.size() == items.size(), "Global search did not narrow down to the three sources");
+        require(results.size() == items.size(), "Global search did not narrow down to the two sources");
         for (var item : items) {
             require(results.stream().filter(stack -> ItemStack.isSameItemSameComponents(stack, item)).count() == 1,
                 "Expected one global search result for " + item);
         }
         select(screen, tab);
-        LogUtils.getLogger().info("COMPACT_FACILITIES_CREATIVE_TAB title, icon, three entries, pickups and search passed in {}", language);
+        LogUtils.getLogger().info("COMPACT_FACILITIES_CREATIVE_TAB title, icon, two uncharged entries, pickups and search passed in {}", language);
     }
 
-    private static void checkFilled(ItemStack stack, Fluid fluid) {
-        var charge = stack.get(ModDataComponents.FLUID_SOURCE_CHARGE);
-        require(stack.is(ModItems.FLUID_SOURCE.get()) && charge != null && charge.complete() && charge.fluid().is(fluid),
-            "Expected a filled creative source for " + fluid);
+    private static void checkUnbound(ItemStack stack) {
+        require(stack.is(ModItems.FLUID_SOURCE.get()) && !stack.has(ModDataComponents.FLUID_SOURCE_CHARGE),
+            "Expected an unbound finished source");
     }
 
     private static void select(CreativeModeInventoryScreen screen, CreativeModeTab tab) {

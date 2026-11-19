@@ -2,6 +2,7 @@ package dev.scathiard.compactfacilities.test;
 
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.AllBlocks;
+import com.simibubi.create.AllFluids;
 import com.simibubi.create.AllItems;
 import com.simibubi.create.content.equipment.goggles.GoggleOverlayRenderer;
 import com.simibubi.create.content.equipment.goggles.GogglesItem;
@@ -27,6 +28,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.GameType;
@@ -69,6 +71,7 @@ public final class ClientSmoke {
     private static final BlockPos LAVA = HALF.east(2);
     private static final BlockPos WATER = LAVA.east(2);
     private static final BlockPos DAMAGED = WATER.south(2);
+    private static final BlockPos EDITABLE = WATER.east();
     private static final String DAMAGED_FIELD = "unreadable test charge";
     private static int phase, elapsed;
     private static CompletableFuture<?> work;
@@ -278,12 +281,60 @@ public final class ClientSmoke {
             case 19 -> {
                 if (!Files.isRegularFile(mc.gameDirectory.toPath().resolve("screenshots").resolve(CREATIVE_TAB))) return;
                 mc.setScreen(null);
+                work = onServer(mc, player -> {
+                    player.serverLevel().setBlockAndUpdate(EDITABLE, ModBlocks.FLUID_SOURCE.get().defaultBlockState());
+                    player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(AllFluids.HONEY.getSource().getBucket()));
+                });
+                next();
+            }
+            case 20 -> {
+                if (!(mc.level.getBlockEntity(EDITABLE) instanceof FluidSourceEntity source)
+                    || !mc.player.getMainHandItem().is(AllFluids.HONEY.getSource().getBucket())) return;
+                require(source.charge() == null, "Test source already had a binding");
+                clickCreativeSource(mc);
+                next();
+            }
+            case 21 -> {
+                var source = (FluidSourceEntity) mc.level.getBlockEntity(EDITABLE);
+                if (source.charge() == null || source.charge().fluid().getFluid() != AllFluids.HONEY.getSource()) return;
+                require(source.charge().complete() && source.charge().target() == 1, "Client received an unfinished creative source");
+                work = onServer(mc, player -> {
+                    require(player.getMainHandItem().is(AllFluids.HONEY.getSource().getBucket()), "Creative bind consumed the container");
+                    player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BUCKET, 4));
+                });
+                next();
+            }
+            case 22 -> {
+                if (!mc.player.getMainHandItem().is(Items.BUCKET)) return;
+                clickCreativeSource(mc);
+                next();
+            }
+            case 23 -> {
+                var source = (FluidSourceEntity) mc.level.getBlockEntity(EDITABLE);
+                if (source.charge() != null) return;
+                require(mc.player.getMainHandItem().is(Items.BUCKET) && mc.player.getMainHandItem().getCount() == 4,
+                    "Clearing changed the client hand");
+                work = onServer(mc, player -> {
+                    var be = (FluidSourceEntity) player.serverLevel().getBlockEntity(EDITABLE);
+                    require(be.charge() == null && !be.saveCustomOnly(player.registryAccess()).contains("Charge")
+                        && player.getMainHandItem().is(Items.BUCKET) && player.getMainHandItem().getCount() == 4,
+                        "Cleared source or creative hand disagreed on the server");
+                });
+                next();
+            }
+            case 24 -> {
+                LogUtils.getLogger().info("COMPACT_FACILITIES_CREATIVE_SYNC native clicks bound honey and cleared the source in {}", LANGUAGE);
                 LogUtils.getLogger().info("COMPACT_FACILITIES_CLIENT_PASSED saved-world={} upgraded={} language={} jei={} goggles={} gallery={} inventory={}",
                     WORLD, !UPGRADE_WORLD.isEmpty(), LANGUAGE, Boolean.getBoolean("compact_facilities.verifyJei"), GOGGLES, PHOTO, INVENTORY);
                 next();
                 mc.stop();
             }
         }
+    }
+
+    private static void clickCreativeSource(Minecraft mc) {
+        var hit = new BlockHitResult(Vec3.atCenterOf(EDITABLE).add(.5, 0, 0), Direction.EAST, EDITABLE, false);
+        require(mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, hit).consumesAction(), "Creative container click ignored");
     }
 
     private static boolean recipeViewerReady() {

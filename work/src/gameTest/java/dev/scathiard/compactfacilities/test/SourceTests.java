@@ -10,19 +10,26 @@ import com.simibubi.create.content.kinetics.base.DirectionalKineticBlock;
 import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import com.simibubi.create.content.kinetics.belt.item.BeltConnectorItem;
 import com.simibubi.create.content.logistics.depot.DepotBlockEntity;
+import com.simibubi.create.foundation.fluid.FluidHelper;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import dev.scathiard.compactfacilities.CompactFacilities;
 import dev.scathiard.compactfacilities.config.ServerConfig;
 import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceCharge;
+import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceEntity;
 import dev.scathiard.compactfacilities.registry.ModBlocks;
 import dev.scathiard.compactfacilities.registry.ModDataComponents;
 import dev.scathiard.compactfacilities.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
@@ -39,6 +46,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.capabilities.Capabilities;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.PlayLevelSoundEvent;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.gametest.GameTestHolder;
@@ -62,13 +71,17 @@ public final class SourceTests {
             test("default", "six_outlets_and_survival_drops", SourceTests::outlets),
             test("default", "depot_transfer_and_belt_spout", SourceTests::transport),
             test("default", "continuous_depot_and_last_bucket", SourceTests::continuousDepot),
-            test("default", "powered_pump_to_tank", SourceTests::pump),
+            test("default", "powered_pump_to_tank", h -> pump(h, FluidSourceCharge.of(new FluidStack(Fluids.WATER, 1000), 1, 1).toItem(), Fluids.WATER)),
+            test("default", "default_honey_line_and_virtual_fluid", SourceTests::honeyLine),
+            test("default", "creative_container_controls", SourceTests::creativeContainers),
             test("default", "bound_source_recipes", FluidSourceArchitectureTests::recipeSync),
             test("default", "charge_codec_recovery", FluidSourceArchitectureTests::codecRecovery),
             test("settings", "pack_rules_and_continuation", SourceTests::settings)));
         if (Boolean.getBoolean("compact_facilities.fullCostTest")) {
             suite.add(new TestFunction("production", "compact_facilities_test.ten_thousand_depot_operations", "compact_facilities_test:empty",
-                350000, 0, true, SourceTests::fullDepot));
+                350000, 0, true, h -> fullDepot(h, Fluids.LAVA)));
+            suite.add(new TestFunction("production", "compact_facilities_test.ten_thousand_honey_depot_operations", "compact_facilities_test:empty",
+                350000, 0, true, h -> fullDepot(h, AllFluids.HONEY.getSource())));
         }
         return suite;
     }
@@ -126,8 +139,7 @@ public final class SourceTests {
             var blank = new ItemStack(ModItems.FLUID_SOURCE_BLANK.get());
             Fluid honeyFluid = AllFluids.HONEY.getSource();
             var honey = new FluidStack(honeyFluid, 1000);
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, honey) == -1, "Default allow list leaked honey");
-            config.bottomlessFluidMode.set(BottomlessFluidMode.ALLOW_ALL);
+            config.bottomlessFluidMode.set(BottomlessFluidMode.DENY_ALL);
             config.hosePulleyBlockThreshold.set(3);
             ItemStack first = process(h, blank.copy(), honey.getFluid());
             h.assertTrue(first.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 3, "Did not follow Create's threshold");
@@ -145,20 +157,17 @@ public final class SourceTests {
             placeItem(h, pos, completed);
             var outlet = fluidAt(h, pos, Direction.NORTH);
             h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(honeyFluid), "Allowed honey source cannot output honey");
-            Fluid potionFluid = AllFluids.POTION.getSource();
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, new FluidStack(potionFluid, 1000)) < 0, "Virtual fluid accepted");
-            config.bottomlessFluidMode.set(BottomlessFluidMode.DENY_ALL);
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, honey) == -1, "Global deny ignored");
-            var water = new FluidStack(Fluids.WATER, 1000);
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, water) == -1
-                && FillingBySpout.fillItem(h.getLevel(), 1000, waterPart, water).isEmpty() && water.getAmount() == 1000
-                && waterPart.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 1, "Water exception bypassed the fluid eligibility rules");
-            h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).isEmpty(), "A banned fluid kept flowing");
-            config.bottomlessFluidMode.set(BottomlessFluidMode.ALLOW_ALL);
-            h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(honeyFluid), "Restoring eligibility lost the source binding");
             config.hosePulleyBlockThreshold.set(-1);
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, honey) == -1, "Disabled bottomless mode bypassed by override");
-            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, water) == -1, "Water bypassed disabled bottomless mode");
+            var water = new FluidStack(Fluids.WATER, 1000);
+            h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, honey) == -1
+                && FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, water) == -1, "Global shutdown bypassed by fill cost");
+            h.assertTrue(FillingBySpout.fillItem(h.getLevel(), 1000, waterPart, water).isEmpty() && water.getAmount() == 1000
+                && waterPart.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 1, "Disabled spout changed the fluid or workpiece");
+            h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).isEmpty(), "Disabled source still supplies honey");
+            var creative = h.makeMockPlayer(GameType.CREATIVE);
+            h.assertFalse(clickSource(h, pos, creative, InteractionHand.MAIN_HAND, new ItemStack(Items.LAVA_BUCKET)), "Disabled source accepted a creative rebind");
+            config.hosePulleyBlockThreshold.set(threshold);
+            h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(honeyFluid), "Restoring the threshold lost the honey binding");
         } finally {
             config.bottomlessFluidMode.set(mode);
             config.hosePulleyBlockThreshold.set(threshold);
@@ -253,14 +262,14 @@ public final class SourceTests {
         return ItemStack.EMPTY;
     }
 
-    private static void fullDepot(GameTestHelper h) {
+    private static void fullDepot(GameTestHelper h, Fluid fluid) {
         var pos = new BlockPos(2, 2, 2);
         h.setBlock(pos, AllBlocks.DEPOT.get());
         h.setBlock(pos.above(2), AllBlocks.SPOUT.get());
         var depot = (DepotBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(pos));
         var port = fluidAt(h, pos.above(2), Direction.UP);
         depot.setHeldItem(ModItems.FLUID_SOURCE_BLANK.toStack());
-        var bucket = new FluidStack(Fluids.LAVA, 1000);
+        var bucket = new FluidStack(fluid, 1000);
         int[] supplied = {0};
         int[] milestone = {2500};
         h.succeedWhen(() -> {
@@ -268,12 +277,12 @@ public final class SourceTests {
             var held = depot.getHeldItem();
             FluidSourceCharge charge = held.get(ModDataComponents.FLUID_SOURCE_CHARGE);
             if (charge != null && charge.fills() >= milestone[0]) {
-                LogUtils.getLogger().info("COMPACT_FACILITIES_LINE fills={} tick={} supplied_mB={}", charge.fills(), h.getTick(), supplied[0]);
+                LogUtils.getLogger().info("COMPACT_FACILITIES_LINE fluid={} fills={} tick={} supplied_mB={}", fluid, charge.fills(), h.getTick(), supplied[0]);
                 milestone[0] += 2500;
             }
             h.assertTrue(held.is(ModItems.FLUID_SOURCE.get()), "The production workpiece is still under the spout");
             h.assertTrue(held.getCount() == 1 && charge != null && charge.complete() && charge.target() == 10000
-                    && charge.fluid().getFluid() == Fluids.LAVA && supplied[0] == 10_000_000 && port.getFluidInTank(0).isEmpty(),
+                    && charge.fluid().getFluid() == fluid && supplied[0] == 10_000_000 && port.getFluidInTank(0).isEmpty(),
                 "Physical production did not account for exactly ten thousand buckets");
         });
     }
@@ -346,16 +355,99 @@ public final class SourceTests {
         });
     }
 
-    private static void pump(GameTestHelper h) {
+    private static void honeyLine(GameTestHelper h) {
+        var level = h.getLevel();
+        var honey = AllFluids.HONEY.getSource();
+        var blank = ModItems.FLUID_SOURCE_BLANK.toStack();
+        h.assertFalse(AllConfigs.server().fluids.bottomlessFluidMode.get().test(honey), "Expected the default Create list to exclude honey");
+        Fluid chocolateFluid = AllFluids.CHOCOLATE.getSource();
+        var chocolate = new FluidStack(chocolateFluid, 1000);
+        h.assertTrue(FillingBySpout.getRequiredAmountForItem(level, blank, chocolate) == 1000, "Default spout rejected chocolate");
+        Fluid potionFluid = AllFluids.POTION.getSource();
+        var potion = new FluidStack(potionFluid, 1000);
+        h.assertTrue(FillingBySpout.getRequiredAmountForItem(level, blank, potion) == -1
+            && FillingBySpout.fillItem(level, 1000, blank, potion).isEmpty() && potion.getAmount() == 1000 && blank.getCount() == 1,
+            "Virtual potion was accepted or consumed");
+        ItemStack piece = process(h, blank, honey);
+        h.assertTrue(piece.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 10000, "Default honey cost changed");
+        for (int fills = 2; fills <= 10000; fills++) piece = process(h, piece, honey);
+        var charge = piece.get(ModDataComponents.FLUID_SOURCE_CHARGE);
+        h.assertTrue(piece.is(ModItems.FLUID_SOURCE.get()) && charge != null && charge.fills() == 10000 && charge.complete(),
+            "The ten-thousandth honey fill did not seal the source");
+        pump(h, piece, honey);
+    }
+
+    private static boolean clickSource(GameTestHelper h, BlockPos pos, Player player, InteractionHand hand, ItemStack held) {
+        player.setItemInHand(hand, held);
+        var before = held.copy();
+        var level = h.getLevel();
+        var at = h.absolutePos(pos);
+        var hit = new BlockHitResult(Vec3.atCenterOf(at).add(0, .5, 0), Direction.UP, at, false);
+        var result = level.getBlockState(at).useItemOn(held, level, player, hand, hit);
+        h.assertTrue(ItemStack.matches(before, player.getItemInHand(hand)), "Container or count changed on block interaction");
+        return result.consumesAction();
+    }
+
+    private static void creativeContainers(GameTestHelper h) {
+        var pos = new BlockPos(2, 2, 2);
+        placeItem(h, pos, ModItems.FLUID_SOURCE.toStack());
+        var sounds = new ArrayList<SoundEvent>();
+        var at = Vec3.atCenterOf(h.absolutePos(pos));
+        Consumer<PlayLevelSoundEvent.AtPosition> record = event -> {
+            if (event.getLevel() == h.getLevel() && event.getPosition().distanceToSqr(at) < .01 && event.getSound() != null)
+                sounds.add(event.getSound().value());
+        };
+        NeoForge.EVENT_BUS.addListener(PlayLevelSoundEvent.AtPosition.class, record);
+        try {
+            checkContainerClicks(h, pos);
+        } finally {
+            NeoForge.EVENT_BUS.unregister(record);
+        }
+        Fluid honeyFluid = AllFluids.HONEY.getSource();
+        var honey = new FluidStack(honeyFluid, 1000);
+        var expected = List.of(FluidHelper.getEmptySound(new FluidStack(Fluids.WATER, 1000)),
+            FluidHelper.getEmptySound(honey), FluidHelper.getFillSound(honey));
+        h.assertTrue(sounds.equals(expected), "Unexpected sounds from accepted or rejected clicks: " + sounds);
+        h.succeed();
+    }
+
+    private static void checkContainerClicks(GameTestHelper h, BlockPos pos) {
+        var source = (FluidSourceEntity) h.getLevel().getBlockEntity(h.absolutePos(pos));
+        var port = fluidAt(h, pos, Direction.NORTH);
+        var creative = h.makeMockPlayer(GameType.CREATIVE);
+        var survival = h.makeMockPlayer(GameType.SURVIVAL);
+        var empty = new ItemStack(Items.BUCKET, 4);
+        var water = new ItemStack(Items.WATER_BUCKET);
+        var main = InteractionHand.MAIN_HAND;
+        var off = InteractionHand.OFF_HAND;
+        h.assertFalse(clickSource(h, pos, survival, main, water) || clickSource(h, pos, creative, main, empty),
+            "An unbound source handled survival filling or empty clearing");
+        h.assertTrue(source.charge() == null && clickSource(h, pos, creative, off, water)
+            && source.charge().target() == 1 && port.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(Fluids.WATER),
+            "Creative offhand bucket did not bind a finished water source");
+        var honey = AllFluids.HONEY.getSource();
+        h.assertTrue(clickSource(h, pos, creative, main, new ItemStack(honey.getBucket()))
+            && source.charge().complete() && port.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(honey), "Rebinding failed");
+        var saved = source.saveCustomOnly(h.getLevel().registryAccess());
+        var potion = new ItemStack(Items.POTION);
+        potion.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.HEALING));
+        h.assertFalse(clickSource(h, pos, creative, main, potion), "Virtual potion changed a bound source");
+        h.assertFalse(clickSource(h, pos, survival, off, empty) || clickSource(h, pos, survival, main, water), "Survival changed the bound source");
+        h.assertTrue(saved.equals(source.saveCustomOnly(h.getLevel().registryAccess())), "A rejected interaction changed saved data");
+        h.assertTrue(clickSource(h, pos, creative, main, empty) && source.charge() == null && port.getFluidInTank(0).isEmpty()
+            && !source.saveCustomOnly(h.getLevel().registryAccess()).contains("Charge"), "Clearing left a binding in the tank or save");
+    }
+
+    private static void pump(GameTestHelper h, ItemStack source, Fluid expected) {
         var pump = new BlockPos(3, 2, 3);
-        placeItem(h, pump.west(), FluidSourceCharge.of(new FluidStack(Fluids.WATER, 1000), 1, 1).toItem());
+        placeItem(h, pump.west(), source);
         h.setBlock(pump.east(), AllBlocks.FLUID_TANK.get());
         h.setBlock(pump, AllBlocks.MECHANICAL_PUMP.getDefaultState().setValue(PumpBlock.FACING, Direction.EAST));
         h.setBlock(pump.south(), AllBlocks.COGWHEEL.getDefaultState().setValue(RotatedPillarKineticBlock.AXIS, Direction.Axis.X));
         h.setBlock(pump.south().west(), AllBlocks.CREATIVE_MOTOR.getDefaultState().setValue(DirectionalKineticBlock.FACING, Direction.EAST));
         var target = fluidAt(h, pump.east(), Direction.WEST);
         h.runAtTickTime(100, () -> {
-            h.assertTrue(target.getFluidInTank(0).is(Fluids.WATER) && target.getFluidInTank(0).getAmount() > 0, "Powered Create pump failed to move water into tank");
+            h.assertTrue(target.getFluidInTank(0).is(expected) && target.getFluidInTank(0).getAmount() > 0, "Powered pump failed to fill the tank with " + expected);
             h.setBlock(pump.south().west(), Blocks.AIR);
         });
         h.runAtTickTime(120, () -> {
@@ -363,7 +455,7 @@ public final class SourceTests {
             target.drain(amount, IFluidHandler.FluidAction.EXECUTE);
         });
         h.runAtTickTime(145, () -> {
-            h.assertTrue(target.getFluidInTank(0).isEmpty(), "Stopped pump still transferring water");
+            h.assertTrue(target.getFluidInTank(0).isEmpty(), "Stopped pump still transferring fluid");
             h.succeed();
         });
     }

@@ -41,6 +41,9 @@ public final class JeiPresentationCheck implements IModPlugin {
     static void check(Minecraft mc) {
         var focus = runtime.getJeiHelpers().getFocusFactory().createFocus(RecipeIngredientRole.INPUT, VanillaTypes.ITEM_STACK, ModItems.FLUID_SOURCE_BLANK.toStack());
         String rule = Component.translatable("tooltip.compact_facilities.jei.fluid_source_rule").getString();
+        boolean zh = mc.getLanguageManager().getSelected().equals("zh_cn");
+        FluidSourcePresentationChecks.require(rule.contains(zh ? "源方块" : "source block") && rule.contains(zh ? "蜂蜜" : "honey")
+            && rule.contains("3") && rule.contains("10,000"), "JEI source rule omits eligibility or cost");
         var recipes = runtime.getRecipeManager().createRecipeLookup(RecipeTypes.INFORMATION).limitFocus(List.of(focus)).get();
         FluidSourcePresentationChecks.require(recipes.anyMatch(recipe -> recipe.getDescription().stream().map(FormattedText::getString)
             .anyMatch(rule::equals)), "JEI has no filling information page for the empty source");

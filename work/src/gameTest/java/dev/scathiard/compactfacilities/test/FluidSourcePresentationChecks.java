@@ -2,7 +2,6 @@ package dev.scathiard.compactfacilities.test;
 
 import com.google.gson.JsonParser;
 import com.mojang.logging.LogUtils;
-import com.simibubi.create.content.fluids.transfer.FluidManipulationBehaviour.BottomlessFluidMode;
 import com.simibubi.create.infrastructure.config.AllConfigs;
 import dev.scathiard.compactfacilities.CompactFacilities;
 import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceEntity;
@@ -69,13 +68,13 @@ final class FluidSourcePresentationChecks {
         var placedLava = (FluidSourceEntity) mc.level.getBlockEntity(lavaPos);
         goggles(placedWater, header, bottomless + water);
         goggles(placedLava, header, bottomless + lava);
-        var mode = AllConfigs.server().fluids.bottomlessFluidMode;
-        var original = mode.get();
+        var threshold = AllConfigs.server().fluids.hosePulleyBlockThreshold;
+        int original = threshold.get();
         try {
-            mode.set(BottomlessFluidMode.DENY_ALL);
+            threshold.set(-1);
             goggles(placedWater, header, fluidPrefix + water, zh ? "已被服务器／整合包规则禁用" : "Disabled by server configuration");
         } finally {
-            mode.set(original);
+            threshold.set(original);
         }
         goggles(placedWater, header, bottomless + water);
         checkModScreen(mc, zh);
