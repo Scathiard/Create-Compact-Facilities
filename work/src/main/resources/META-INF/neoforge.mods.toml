@@ -7,7 +7,7 @@ modId = "compact_facilities"
 version = "${modVersion}"
 displayName = "Create: Compact Facilities"
 authors = "Scathiard"
-description = "Compress a bottomless fluid source into a single block using Create's spout."
+description = "A Create add-on for Minecraft 1.21.1 NeoForge. Shrink whole bulk-supply installations into a single block—without discounting a single part or resource."
 
 [[mixins]]
 config = "compact_facilities.mixins.json"

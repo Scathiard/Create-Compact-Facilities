@@ -1,9 +1,24 @@
 {
-  "item.compact_facilities.compact_fluid_source_blank": "紧凑流体源毛坯",
+  "fml.menu.mods.info.description.compact_facilities": "一个面向 Minecraft 1.21.1 NeoForge 的机械动力附属模组。玩家可以把一座大宗供应设施压缩进单方块，但建造时消耗的部件和资源一分都不会少。",
+  "pack.compact_facilities.description": "机械动力：紧凑设施内置资源",
+  "compact_facilities.configuration.title": "紧凑设施服务端设置",
+  "compact_facilities.configuration.section.compact.facilities.server.toml": "紧凑设施服务端设置",
+  "compact_facilities.configuration.section.compact.facilities.server.toml.title": "紧凑设施服务端设置",
+  "compact_facilities.configuration.requiredFills": "流体源注液次数",
+  "compact_facilities.configuration.requiredFills.tooltip": "新流体源所需的注液器加工次数（每次 1,000 mB）。设为 0 时跟随机械动力软管滑轮门槛",
+  "item.compact_facilities.compact_fluid_source_blank": "空的紧凑流体源",
   "item.compact_facilities.incomplete_compact_fluid_source": "未完成的紧凑流体源",
   "block.compact_facilities.compact_fluid_source": "紧凑流体源",
-  "tooltip.compact_facilities.blank": "用注液器逐桶注入可无限抽取的流体。首桶锁定种类，水共需三桶。",
-  "tooltip.compact_facilities.unbound": "尚未绑定流体",
+  "tooltip.compact_facilities.blank": "还是空的，想注入点什么吗？",
+  "tooltip.compact_facilities.unbound": "无流体",
   "tooltip.compact_facilities.fluid": "流体：%s",
-  "tooltip.compact_facilities.progress": "注液进度：%1$s / %2$s"
+  "tooltip.compact_facilities.progress": "%1$s / %2$s",
+  "tooltip.compact_facilities.source_filled": "已注入%s",
+  "tooltip.compact_facilities.source_flavor": "有志者事竟成",
+  "tooltip.compact_facilities.source_flavor.water": "这也太轻松了吧？",
+  "goggles.compact_facilities.fluid_source.header": "流体源状态：",
+  "goggles.compact_facilities.fluid_source.fluid": "无限供应：%s",
+  "goggles.compact_facilities.fluid_source.disabled": "已被服务器／整合包规则禁用",
+  "tooltip.compact_facilities.ingredient.bound_fluid_source": "需要已注满的紧凑流体源：%s",
+  "tooltip.compact_facilities.jei.fluid_source_rule": "水固定 3 桶；熔岩等其余可用流体默认跟随软管滑轮门槛（10,000 桶）。"
 }

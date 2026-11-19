@@ -5,15 +5,20 @@ import com.mojang.serialization.MapCodec;
 import dev.scathiard.compactfacilities.registry.ModDataComponents;
 import dev.scathiard.compactfacilities.registry.ModIngredientTypes;
 import dev.scathiard.compactfacilities.registry.ModItems;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemLore;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.common.crafting.ICustomIngredient;
 import net.neoforged.neoforge.common.crafting.IngredientType;
 import net.neoforged.neoforge.fluids.FluidStack;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 public record BoundFluidSourceIngredient(Holder<Fluid> fluid) implements ICustomIngredient {
@@ -30,7 +35,12 @@ public record BoundFluidSourceIngredient(Holder<Fluid> fluid) implements ICustom
 
     @Override
     public Stream<ItemStack> getItems() {
-        return Stream.of(FluidSourceCharge.of(new FluidStack(fluid, FluidSourceFilling.DOSE), 1, 1).toItem());
+        var contents = new FluidStack(fluid, FluidSourceFilling.DOSE);
+        var display = FluidSourceCharge.of(contents, 1, 1).toItem();
+        var hint = Component.translatable("tooltip.compact_facilities.ingredient.bound_fluid_source", contents.getHoverName())
+            .withStyle(style -> style.withColor(ChatFormatting.GRAY).withItalic(false));
+        display.set(DataComponents.LORE, new ItemLore(List.of(hint)));
+        return Stream.of(display);
     }
 
     @Override

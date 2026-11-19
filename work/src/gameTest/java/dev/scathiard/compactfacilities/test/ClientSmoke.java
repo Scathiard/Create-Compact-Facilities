@@ -2,6 +2,9 @@ package dev.scathiard.compactfacilities.test;
 
 import com.mojang.logging.LogUtils;
 import com.simibubi.create.AllBlocks;
+import com.simibubi.create.AllItems;
+import com.simibubi.create.content.equipment.goggles.GoggleOverlayRenderer;
+import com.simibubi.create.content.equipment.goggles.GogglesItem;
 import com.simibubi.create.content.fluids.spout.FillingBySpout;
 import com.simibubi.create.content.logistics.depot.DepotBlockEntity;
 import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceCharge;
@@ -11,6 +14,7 @@ import dev.scathiard.compactfacilities.registry.ModDataComponents;
 import dev.scathiard.compactfacilities.registry.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.core.BlockPos;
@@ -20,6 +24,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
@@ -37,6 +42,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -51,10 +57,12 @@ import java.util.function.Consumer;
 
 @EventBusSubscriber(modid = "compact_facilities_test", value = Dist.CLIENT)
 public final class ClientSmoke {
+    private static final String LANGUAGE = System.getProperty("compact_facilities.smokeLanguage", "zh_cn");
     private static final String UPGRADE_WORLD = System.getProperty("compact_facilities.upgradeWorld", "");
     private static final String WORLD = UPGRADE_WORLD.isEmpty() ? "compact-facilities-" + System.currentTimeMillis() : UPGRADE_WORLD;
     private static final String PHOTO = WORLD + ".png";
     private static final String INVENTORY = WORLD + "-inventory.png";
+    private static final String GOGGLES = WORLD + "-goggles.png";
     private static final BlockPos EMPTY = new BlockPos(-2, 81, 0);
     private static final BlockPos HALF = EMPTY.east(2);
     private static final BlockPos LAVA = HALF.east(2);
@@ -100,9 +108,9 @@ public final class ClientSmoke {
             case 0 -> {
                 if (mc.screen == null || mc.getOverlay() != null) return;
                 mc.options.pauseOnLostFocus = false;
-                if (!mc.getLanguageManager().getSelected().equals("zh_cn")) {
-                    mc.options.languageCode = "zh_cn";
-                    mc.getLanguageManager().setSelected("zh_cn");
+                if (!mc.getLanguageManager().getSelected().equals(LANGUAGE)) {
+                    mc.options.languageCode = LANGUAGE;
+                    mc.getLanguageManager().setSelected(LANGUAGE);
                     work = mc.reloadResourcePacks();
                     return;
                 }
@@ -125,8 +133,10 @@ public final class ClientSmoke {
                 next();
             }
             case 2 -> {
-                if (elapsed < 40 || !synced(mc)) return;
+                if (elapsed < 40 || !synced(mc) || !recipeViewerReady()) return;
                 checkModels(mc);
+                FluidSourcePresentationChecks.check(mc, LANGUAGE, WATER, LAVA);
+                if (Boolean.getBoolean("compact_facilities.verifyJei")) JeiPresentationCheck.check(mc);
                 next();
                 mc.level.disconnect();
                 mc.disconnect(new TitleScreen());
@@ -173,7 +183,13 @@ public final class ClientSmoke {
                 if (elapsed < 10 || mc.gameMode.getPlayerMode() != GameType.SURVIVAL) return;
                 mc.options.guiScale().set(3);
                 mc.resizeDisplay();
-                mc.setScreen(new InventoryScreen(mc.player));
+                mc.setScreen(new InventoryScreen(mc.player) {
+                    @Override
+                    public void render(GuiGraphics graphics, int mouseX, int mouseY, float tick) {
+                        var waterSlot = getMenu().getSlot(39);
+                        super.render(graphics, getGuiLeft() + waterSlot.x + 8, getGuiTop() + waterSlot.y + 8, tick);
+                    }
+                });
                 next();
             }
             case 8 -> {
@@ -217,6 +233,8 @@ public final class ClientSmoke {
             case 13 -> {
                 if (!inWorld(mc) || !synced(mc) || !(mc.level.getBlockEntity(DAMAGED) instanceof FluidSourceEntity source)) return;
                 require(source.charge() == null, "Damaged source rendered an active binding after reload");
+                boolean zh = LANGUAGE.equals("zh_cn");
+                FluidSourcePresentationChecks.goggles(source, zh ? "流体源状态：" : "Fluid Source:", zh ? "无流体" : "No fluid");
                 work = onServer(mc, player -> {
                     var level = player.serverLevel();
                     var be = (FluidSourceEntity) level.getBlockEntity(DAMAGED);
@@ -227,12 +245,33 @@ public final class ClientSmoke {
                 next();
             }
             case 14 -> {
-                LogUtils.getLogger().info("COMPACT_FACILITIES_CLIENT_PASSED saved-world={} upgraded={} corrupt-sync-and-reload=passed gallery={} inventory={}",
-                    WORLD, !UPGRADE_WORLD.isEmpty(), PHOTO, INVENTORY);
+                work = onServer(mc, player -> {
+                    player.setItemSlot(EquipmentSlot.HEAD, AllItems.GOGGLES.asStack());
+                    player.teleportTo(player.serverLevel(), WATER.getX() + 3.5, WATER.getY(), WATER.getZ() + 0.5, 90, 21);
+                });
+                next();
+            }
+            case 15 -> {
+                if (!GogglesItem.isWearingGoggles(mc.player) || !WATER.equals(GoggleOverlayRenderer.lastHovered)
+                    || GoggleOverlayRenderer.hoverTicks < 30) return;
+                Screenshot.grab(mc.gameDirectory, GOGGLES, mc.getMainRenderTarget(),
+                    message -> LogUtils.getLogger().info("Compact Facilities goggles: {}", message.getString()));
+                next();
+            }
+            case 16 -> {
+                if (!Files.isRegularFile(mc.gameDirectory.toPath().resolve("screenshots").resolve(GOGGLES))) return;
+                LogUtils.getLogger().info("COMPACT_FACILITIES_CLIENT_PASSED saved-world={} upgraded={} language={} jei={} goggles={} gallery={} inventory={}",
+                    WORLD, !UPGRADE_WORLD.isEmpty(), LANGUAGE, Boolean.getBoolean("compact_facilities.verifyJei"), GOGGLES, PHOTO, INVENTORY);
                 next();
                 mc.stop();
             }
         }
+    }
+
+    private static boolean recipeViewerReady() {
+        if (!Boolean.getBoolean("compact_facilities.verifyJei")) return true;
+        require(ModList.get().isLoaded("jei"), "Optional JEI verification requested without JEI");
+        return JeiPresentationCheck.ready();
     }
 
     private static void reopen(Minecraft mc) {
@@ -347,9 +386,6 @@ public final class ClientSmoke {
 
     private static void checkModels(Minecraft mc) {
         FluidSourceArchitectureTests.checkRecipes(mc.level, mc.level.getRecipeManager());
-        require(ModItems.FLUID_SOURCE_BLANK.toStack().getHoverName().getString().equals("紧凑流体源毛坯"), "Wrong blank name");
-        require(ModItems.INCOMPLETE_FLUID_SOURCE.toStack().getHoverName().getString().equals("未完成的紧凑流体源"), "Wrong workpiece name");
-        require(ModItems.FLUID_SOURCE.toStack().getHoverName().getString().equals("紧凑流体源"), "Wrong source name");
         for (int slot = 1; slot <= 4; slot++) {
             ItemStack stack = mc.player.getInventory().getItem(slot);
             require(mc.getItemRenderer().getModel(stack, mc.level, mc.player, 0).isCustomRenderer(),

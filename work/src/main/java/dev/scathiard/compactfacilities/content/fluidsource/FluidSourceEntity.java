@@ -1,14 +1,18 @@
 package dev.scathiard.compactfacilities.content.fluidsource;
 
 import com.mojang.logging.LogUtils;
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
+import com.simibubi.create.foundation.utility.CreateLang;
 import dev.scathiard.compactfacilities.registry.ModBlockEntities;
 import dev.scathiard.compactfacilities.registry.ModDataComponents;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
@@ -21,7 +25,9 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-public final class FluidSourceEntity extends BlockEntity {
+import java.util.List;
+
+public final class FluidSourceEntity extends BlockEntity implements IHaveGoggleInformation {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String CHARGE_KEY = "Charge";
     private final Outlet outlet = new Outlet();
@@ -41,6 +47,28 @@ public final class FluidSourceEntity extends BlockEntity {
 
     public @Nullable FluidSourceCharge charge() { return charge; }
     public IFluidHandler outlet() { return outlet; }
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean sneaking) {
+        CreateLang.builder().add(Component.translatable("goggles.compact_facilities.fluid_source.header")).forGoggles(tooltip);
+        if (charge == null) {
+            CreateLang.builder().add(Component.translatable("tooltip.compact_facilities.unbound"))
+                .style(ChatFormatting.GRAY).forGoggles(tooltip, 1);
+            return true;
+        }
+
+        Component name = charge.fluid().copy().getHoverName();
+        if (FluidSourceFilling.allowed(charge.fluid().getFluid())) {
+            CreateLang.builder().add(Component.translatable("goggles.compact_facilities.fluid_source.fluid", name))
+                .style(ChatFormatting.AQUA).forGoggles(tooltip, 1);
+        } else {
+            CreateLang.builder().add(Component.translatable("tooltip.compact_facilities.fluid", name))
+                .style(ChatFormatting.GRAY).forGoggles(tooltip, 1);
+            CreateLang.builder().add(Component.translatable("goggles.compact_facilities.fluid_source.disabled"))
+                .style(ChatFormatting.GOLD).forGoggles(tooltip, 1);
+        }
+        return true;
+    }
 
     @Override
     protected void applyImplicitComponents(DataComponentInput input) {

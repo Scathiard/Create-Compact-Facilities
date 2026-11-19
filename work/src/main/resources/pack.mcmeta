@@ -1,6 +1,9 @@
 {
   "pack": {
     "pack_format": 34,
-    "description": "Create: Compact Facilities resources"
+    "description": {
+      "translate": "pack.compact_facilities.description",
+      "fallback": "Create: Compact Facilities resources"
+    }
   }
 }
