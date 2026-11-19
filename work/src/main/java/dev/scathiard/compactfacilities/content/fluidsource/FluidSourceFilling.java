@@ -1,19 +1,22 @@
-package dev.scathiard.compactfacilities;
+package dev.scathiard.compactfacilities.content.fluidsource;
 
 import com.simibubi.create.infrastructure.config.AllConfigs;
+import dev.scathiard.compactfacilities.config.ServerConfig;
+import dev.scathiard.compactfacilities.registry.ModDataComponents;
+import dev.scathiard.compactfacilities.registry.ModItems;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
 
-public final class SourceFilling {
+public final class FluidSourceFilling {
     public static final int DOSE = FluidType.BUCKET_VOLUME;
 
-    private SourceFilling() {}
+    private FluidSourceFilling() {}
 
     public static boolean isWorkpiece(ItemStack stack) {
-        return stack.is(CompactFacilities.BLANK.get()) || stack.is(CompactFacilities.UNFINISHED.get());
+        return stack.is(ModItems.FLUID_SOURCE_BLANK.get()) || stack.is(ModItems.INCOMPLETE_FLUID_SOURCE.get());
     }
 
     public static boolean allowed(Fluid fluid) {
@@ -25,23 +28,23 @@ public final class SourceFilling {
 
     private static int target(Fluid fluid) {
         if (Fluids.WATER.isSame(fluid)) return 3;
-        int override = CompactFacilities.REQUIRED_FILLS.get();
+        int override = ServerConfig.REQUIRED_FILLS.get();
         return override > 0 ? override : Math.max(1, AllConfigs.server().fluids.hosePulleyBlockThreshold.get());
     }
 
     public static int required(ItemStack stack, FluidStack fluid) {
         if (fluid.isEmpty() || !allowed(fluid.getFluid())) return -1;
-        Charge charge = stack.get(CompactFacilities.CHARGE);
-        if (stack.is(CompactFacilities.BLANK.get())) return charge == null ? DOSE : -1;
-        return stack.is(CompactFacilities.UNFINISHED.get()) && charge != null && charge.valid()
+        FluidSourceCharge charge = stack.get(ModDataComponents.FLUID_SOURCE_CHARGE);
+        if (stack.is(ModItems.FLUID_SOURCE_BLANK.get())) return charge == null ? DOSE : -1;
+        return stack.is(ModItems.INCOMPLETE_FLUID_SOURCE.get()) && charge != null && charge.valid()
             && !charge.complete() && charge.fluid().isSameFluidSameComponents(fluid) ? DOSE : -1;
     }
 
     public static ItemStack finish(ItemStack stack, int requested, FluidStack fluid) {
         if (requested != DOSE || fluid.getAmount() < DOSE || required(stack, fluid) != DOSE) return ItemStack.EMPTY;
-        Charge previous = stack.get(CompactFacilities.CHARGE);
-        Charge next = previous == null ? Charge.of(fluid, 1, target(fluid.getFluid()))
-            : new Charge(previous.fluid(), previous.fills() + 1, previous.target());
+        FluidSourceCharge previous = stack.get(ModDataComponents.FLUID_SOURCE_CHARGE);
+        FluidSourceCharge next = previous == null ? FluidSourceCharge.of(fluid, 1, target(fluid.getFluid()))
+            : new FluidSourceCharge(previous.fluid(), previous.fills() + 1, previous.target());
         ItemStack result = next.toItem();
         stack.shrink(1);
         fluid.shrink(DOSE);

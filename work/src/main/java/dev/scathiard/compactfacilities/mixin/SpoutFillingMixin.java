@@ -1,7 +1,7 @@
 package dev.scathiard.compactfacilities.mixin;
 
 import com.simibubi.create.content.fluids.spout.FillingBySpout;
-import dev.scathiard.compactfacilities.SourceFilling;
+import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceFilling;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.fluids.FluidStack;
@@ -14,17 +14,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class SpoutFillingMixin {
     @Inject(method = "canItemBeFilled", at = @At("HEAD"), cancellable = true)
     private static void compactFacilities$accept(Level level, ItemStack stack, CallbackInfoReturnable<Boolean> result) {
-        if (SourceFilling.isWorkpiece(stack)) result.setReturnValue(true);
+        if (FluidSourceFilling.isWorkpiece(stack)) result.setReturnValue(true);
     }
 
     @Inject(method = "getRequiredAmountForItem", at = @At("HEAD"), cancellable = true)
     private static void compactFacilities$quote(Level level, ItemStack stack, FluidStack fluid, CallbackInfoReturnable<Integer> result) {
-        if (SourceFilling.isWorkpiece(stack)) result.setReturnValue(SourceFilling.required(stack, fluid));
+        if (FluidSourceFilling.isWorkpiece(stack)) result.setReturnValue(FluidSourceFilling.required(stack, fluid));
     }
 
     @Inject(method = "fillItem", at = @At("HEAD"), cancellable = true)
     private static void compactFacilities$finish(Level level, int amount, ItemStack stack, FluidStack fluid,
                                              CallbackInfoReturnable<ItemStack> result) {
-        if (SourceFilling.isWorkpiece(stack)) result.setReturnValue(SourceFilling.finish(stack, amount, fluid));
+        if (FluidSourceFilling.isWorkpiece(stack)) result.setReturnValue(FluidSourceFilling.finish(stack, amount, fluid));
     }
 }

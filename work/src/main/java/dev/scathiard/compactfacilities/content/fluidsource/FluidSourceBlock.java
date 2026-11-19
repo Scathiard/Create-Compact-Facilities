@@ -1,4 +1,4 @@
-package dev.scathiard.compactfacilities;
+package dev.scathiard.compactfacilities.content.fluidsource;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;

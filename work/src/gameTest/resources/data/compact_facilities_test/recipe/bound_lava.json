@@ -1,0 +1,17 @@
+{
+  "type": "create:deploying",
+  "ingredients": [
+    {
+      "item": "minecraft:paper"
+    },
+    {
+      "type": "compact_facilities:bound_fluid_source",
+      "fluid": "minecraft:lava"
+    }
+  ],
+  "results": [
+    {
+      "id": "minecraft:brick"
+    }
+  ]
+}

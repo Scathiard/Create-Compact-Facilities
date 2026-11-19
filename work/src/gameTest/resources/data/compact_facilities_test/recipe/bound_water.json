@@ -1,0 +1,16 @@
+{
+  "type": "create:mechanical_crafting",
+  "accept_mirrored": false,
+  "pattern": [
+    "W"
+  ],
+  "key": {
+    "W": {
+      "type": "compact_facilities:bound_fluid_source",
+      "fluid": "minecraft:water"
+    }
+  },
+  "result": {
+    "id": "minecraft:paper"
+  }
+}

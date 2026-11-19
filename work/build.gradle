@@ -66,6 +66,7 @@ neoForge {
             client()
             gameDirectory = file("${gameRoot}/client")
             systemProperty 'compact_facilities.clientSmoke', String.valueOf(clientSmoke)
+            systemProperty 'compact_facilities.upgradeWorld', providers.gradleProperty('upgradeWorld').orElse('').get()
             if (clientSmoke) programArguments.addAll('--width', '1152', '--height', '720')
         }
         gameTestServer {

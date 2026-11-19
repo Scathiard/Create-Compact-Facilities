@@ -1,8 +1,8 @@
 package dev.scathiard.compactfacilities.test;
 
+import com.mojang.logging.LogUtils;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.AllFluids;
-import com.mojang.logging.LogUtils;
 import com.simibubi.create.content.fluids.pump.PumpBlock;
 import com.simibubi.create.content.fluids.spout.FillingBySpout;
 import com.simibubi.create.content.fluids.transfer.FluidManipulationBehaviour.BottomlessFluidMode;
@@ -11,26 +11,31 @@ import com.simibubi.create.content.kinetics.base.RotatedPillarKineticBlock;
 import com.simibubi.create.content.kinetics.belt.item.BeltConnectorItem;
 import com.simibubi.create.content.logistics.depot.DepotBlockEntity;
 import com.simibubi.create.infrastructure.config.AllConfigs;
-import dev.scathiard.compactfacilities.Charge;
 import dev.scathiard.compactfacilities.CompactFacilities;
+import dev.scathiard.compactfacilities.config.ServerConfig;
+import dev.scathiard.compactfacilities.content.fluidsource.FluidSourceCharge;
+import dev.scathiard.compactfacilities.registry.ModBlocks;
+import dev.scathiard.compactfacilities.registry.ModDataComponents;
+import dev.scathiard.compactfacilities.registry.ModItems;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTestGenerator;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.gametest.framework.TestFunction;
-import net.minecraft.world.level.GameType;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.capabilities.Capabilities;
@@ -46,6 +51,10 @@ import java.util.function.Consumer;
 @Mod("compact_facilities_test")
 @GameTestHolder("compact_facilities_test")
 public final class SourceTests {
+    public SourceTests(IEventBus bus) {
+        FluidSourceArchitectureTests.register(bus);
+    }
+
     @GameTestGenerator
     public static List<TestFunction> tests() {
         var suite = new ArrayList<>(List.of(test("default", "craft_and_ten_thousand", SourceTests::fullCost),
@@ -54,6 +63,8 @@ public final class SourceTests {
             test("default", "depot_transfer_and_belt_spout", SourceTests::transport),
             test("default", "continuous_depot_and_last_bucket", SourceTests::continuousDepot),
             test("default", "powered_pump_to_tank", SourceTests::pump),
+            test("default", "bound_source_recipes", FluidSourceArchitectureTests::recipeSync),
+            test("default", "charge_codec_recovery", FluidSourceArchitectureTests::codecRecovery),
             test("settings", "pack_rules_and_continuation", SourceTests::settings)));
         if (Boolean.getBoolean("compact_facilities.fullCostTest")) {
             suite.add(new TestFunction("production", "compact_facilities_test.ten_thousand_depot_operations", "compact_facilities_test:empty",
@@ -86,21 +97,21 @@ public final class SourceTests {
         var craft = CraftingInput.of(2, 1, List.of(AllBlocks.FLUID_TANK.asStack(), AllBlocks.HOSE_PULLEY.asStack()));
         var recipe = level.getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craft, level).orElseThrow();
         ItemStack blank = recipe.value().assemble(craft, level.registryAccess());
-        h.assertTrue(blank.is(CompactFacilities.BLANK.get()), "Survival recipe must make a blank");
+        h.assertTrue(blank.is(ModItems.FLUID_SOURCE_BLANK.get()), "Survival recipe must make a blank");
         blank.setCount(2);
         ItemStack part = process(h, blank, Fluids.LAVA);
-        h.assertTrue(blank.getCount() == 1 && blank.get(CompactFacilities.CHARGE) == null, "Each cycle consumes only one workpiece");
-        h.assertTrue(part.get(CompactFacilities.CHARGE).target() == 10000, "Default Create threshold should be 10000");
+        h.assertTrue(blank.getCount() == 1 && blank.get(ModDataComponents.FLUID_SOURCE_CHARGE) == null, "Each cycle consumes only one workpiece");
+        h.assertTrue(part.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 10000, "Default Create threshold should be 10000");
         for (int i = 2; i <= 9999; i++) part = process(h, part, Fluids.LAVA);
         part = roundTrip(h, part);
-        h.assertTrue(part.is(CompactFacilities.UNFINISHED.get()) && part.get(CompactFacilities.CHARGE).fills() == 9999, "Progress or binding lost");
+        h.assertTrue(part.is(ModItems.INCOMPLETE_FLUID_SOURCE.get()) && part.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 9999, "Progress or binding lost");
         var wrong = new FluidStack(Fluids.WATER, 1000);
         h.assertTrue(FillingBySpout.getRequiredAmountForItem(level, part, wrong) == -1
             && FillingBySpout.fillItem(level, 1000, part, wrong).isEmpty() && wrong.getAmount() == 1000, "Wrong fluid must be untouched");
         var partial = new FluidStack(Fluids.LAVA, 999);
         h.assertTrue(FillingBySpout.fillItem(level, 1000, part, partial).isEmpty() && partial.getAmount() == 999, "Incomplete dose committed");
         var source = process(h, part, Fluids.LAVA);
-        h.assertTrue(source.is(CompactFacilities.SOURCE_ITEM.get()) && source.get(CompactFacilities.CHARGE).complete(), "Final result lost");
+        h.assertTrue(source.is(ModItems.FLUID_SOURCE.get()) && source.get(ModDataComponents.FLUID_SOURCE_CHARGE).complete(), "Final result lost");
         h.assertTrue(!FillingBySpout.canItemBeFilled(level, source), "Final source should not accept spouting");
         h.assertTrue(process(h, new ItemStack(Items.BUCKET), Fluids.LAVA).is(Items.LAVA_BUCKET), "Ordinary bucket regression");
         h.succeed();
@@ -110,26 +121,26 @@ public final class SourceTests {
         var config = AllConfigs.server().fluids;
         var mode = config.bottomlessFluidMode.get();
         int threshold = config.hosePulleyBlockThreshold.get();
-        int override = CompactFacilities.REQUIRED_FILLS.get();
+        int override = ServerConfig.REQUIRED_FILLS.get();
         try {
-            var blank = new ItemStack(CompactFacilities.BLANK.get());
+            var blank = new ItemStack(ModItems.FLUID_SOURCE_BLANK.get());
             Fluid honeyFluid = AllFluids.HONEY.getSource();
             var honey = new FluidStack(honeyFluid, 1000);
             h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, honey) == -1, "Default allow list leaked honey");
             config.bottomlessFluidMode.set(BottomlessFluidMode.ALLOW_ALL);
             config.hosePulleyBlockThreshold.set(3);
             ItemStack first = process(h, blank.copy(), honey.getFluid());
-            h.assertTrue(first.get(CompactFacilities.CHARGE).target() == 3, "Did not follow Create's threshold");
-            CompactFacilities.REQUIRED_FILLS.set(1);
-            h.assertTrue(process(h, blank.copy(), Fluids.LAVA).is(CompactFacilities.SOURCE_ITEM.get()), "Single-operation lava override failed");
+            h.assertTrue(first.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 3, "Did not follow Create's threshold");
+            ServerConfig.REQUIRED_FILLS.set(1);
+            h.assertTrue(process(h, blank.copy(), Fluids.LAVA).is(ModItems.FLUID_SOURCE.get()), "Single-operation lava override failed");
             config.hosePulleyBlockThreshold.set(20000);
             var waterPart = process(h, blank.copy(), Fluids.WATER);
-            h.assertTrue(waterPart.is(CompactFacilities.UNFINISHED.get()) && waterPart.get(CompactFacilities.CHARGE).target() == 3,
+            h.assertTrue(waterPart.is(ModItems.INCOMPLETE_FLUID_SOURCE.get()) && waterPart.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 3,
                 "The general fill override or hose pulley threshold changed the water cost");
             first = process(h, roundTrip(h, first), honey.getFluid());
-            h.assertTrue(first.get(CompactFacilities.CHARGE).target() == 3 && first.get(CompactFacilities.CHARGE).fills() == 2, "Existing contract changed");
+            h.assertTrue(first.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 3 && first.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 2, "Existing contract changed");
             var completed = process(h, first, honey.getFluid());
-            h.assertTrue(completed.is(CompactFacilities.SOURCE_ITEM.get()), "Honey completion failed");
+            h.assertTrue(completed.is(ModItems.FLUID_SOURCE.get()), "Honey completion failed");
             BlockPos pos = new BlockPos(2, 2, 2);
             placeItem(h, pos, completed);
             var outlet = fluidAt(h, pos, Direction.NORTH);
@@ -141,7 +152,7 @@ public final class SourceTests {
             var water = new FluidStack(Fluids.WATER, 1000);
             h.assertTrue(FillingBySpout.getRequiredAmountForItem(h.getLevel(), blank, water) == -1
                 && FillingBySpout.fillItem(h.getLevel(), 1000, waterPart, water).isEmpty() && water.getAmount() == 1000
-                && waterPart.get(CompactFacilities.CHARGE).fills() == 1, "Water exception bypassed the fluid eligibility rules");
+                && waterPart.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 1, "Water exception bypassed the fluid eligibility rules");
             h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).isEmpty(), "A banned fluid kept flowing");
             config.bottomlessFluidMode.set(BottomlessFluidMode.ALLOW_ALL);
             h.assertTrue(outlet.drain(1000, IFluidHandler.FluidAction.EXECUTE).is(honeyFluid), "Restoring eligibility lost the source binding");
@@ -151,7 +162,7 @@ public final class SourceTests {
         } finally {
             config.bottomlessFluidMode.set(mode);
             config.hosePulleyBlockThreshold.set(threshold);
-            CompactFacilities.REQUIRED_FILLS.set(override);
+            ServerConfig.REQUIRED_FILLS.set(override);
         }
         h.succeed();
     }
@@ -164,7 +175,7 @@ public final class SourceTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, stack);
         var hit = new BlockHitResult(Vec3.atCenterOf(base).add(0, .5, 0), Direction.UP, base, false);
         var result = stack.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND, hit));
-        h.assertTrue(result.consumesAction() && level.getBlockState(h.absolutePos(pos)).is(CompactFacilities.SOURCE.get()), "Block item did not place");
+        h.assertTrue(result.consumesAction() && level.getBlockState(h.absolutePos(pos)).is(ModBlocks.FLUID_SOURCE.get()), "Block item did not place");
     }
 
     private static IFluidHandler fluidAt(GameTestHelper h, BlockPos pos, Direction side) {
@@ -175,7 +186,7 @@ public final class SourceTests {
 
     private static void outlets(GameTestHelper h) {
         var pos = new BlockPos(2, 2, 2);
-        placeItem(h, pos, Charge.of(new FluidStack(Fluids.LAVA, 1000), 10000, 10000).toItem());
+        placeItem(h, pos, FluidSourceCharge.of(new FluidStack(Fluids.LAVA, 1000), 10000, 10000).toItem());
         for (Direction side : Direction.values()) {
             var port = fluidAt(h, pos, side);
             h.assertTrue(port.fill(new FluidStack(Fluids.WATER, 1000), IFluidHandler.FluidAction.EXECUTE) == 0, "Input accepted");
@@ -191,7 +202,7 @@ public final class SourceTests {
         var snapshot = entity.saveWithFullMetadata(level.registryAccess());
         var state = level.getBlockState(absolute);
         var dropped = Block.getDrops(state, level, absolute, entity);
-        h.assertTrue(dropped.size() == 1 && dropped.getFirst().get(CompactFacilities.CHARGE).complete(), "Survival loot lost binding");
+        h.assertTrue(dropped.size() == 1 && dropped.getFirst().get(ModDataComponents.FLUID_SOURCE_CHARGE).complete(), "Survival loot lost binding");
         h.setBlock(pos, Blocks.AIR);
         var loaded = net.minecraft.world.level.block.entity.BlockEntity.loadStatic(absolute, state, snapshot, level.registryAccess());
         h.setBlock(pos, state);
@@ -217,12 +228,12 @@ public final class SourceTests {
         var first = fluidAt(h, depot.above(2), Direction.UP);
         var second = fluidAt(h, beltWork.above(2), Direction.UP);
         var depotEntity = (DepotBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(depot));
-        depotEntity.setHeldItem(new ItemStack(CompactFacilities.BLANK.get()));
+        depotEntity.setHeldItem(new ItemStack(ModItems.FLUID_SOURCE_BLANK.get()));
         first.fill(new FluidStack(Fluids.LAVA, 1000), IFluidHandler.FluidAction.EXECUTE);
         h.runAtTickTime(48, () -> {
             var inventory = h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, h.absolutePos(depot), Direction.UP);
-            ItemStack part = extract(inventory, CompactFacilities.UNFINISHED.get());
-            h.assertTrue(!part.isEmpty() && part.get(CompactFacilities.CHARGE).fills() == 1 && first.getFluidInTank(0).isEmpty(), "Depot spout did not perform exactly one operation");
+            ItemStack part = extract(inventory, ModItems.INCOMPLETE_FLUID_SOURCE.get());
+            h.assertTrue(!part.isEmpty() && part.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 1 && first.getFluidInTank(0).isEmpty(), "Depot spout did not perform exactly one operation");
             var belt = h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK, h.absolutePos(beltWork), Direction.UP);
             second.fill(new FluidStack(Fluids.LAVA, 1000), IFluidHandler.FluidAction.EXECUTE);
             h.assertTrue(belt != null && belt.insertItem(0, roundTrip(h, part), false).isEmpty(), "Could not insert returned part on belt");
@@ -230,8 +241,8 @@ public final class SourceTests {
         h.succeedWhen(() -> {
             h.assertTrue(h.getTick() > 48 && second.getFluidInTank(0).isEmpty(), "Belt has not consumed one bucket");
             var be = (com.simibubi.create.content.kinetics.belt.BeltBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(beltWork));
-            boolean found = be.getInventory().getTransportedItems().stream().anyMatch(t -> t.stack.get(CompactFacilities.CHARGE) != null
-                && t.stack.get(CompactFacilities.CHARGE).fills() == 2);
+            boolean found = be.getInventory().getTransportedItems().stream().anyMatch(t -> t.stack.get(ModDataComponents.FLUID_SOURCE_CHARGE) != null
+                && t.stack.get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 2);
             h.assertTrue(found, "Belt did not resume the depot workpiece");
         });
     }
@@ -248,19 +259,19 @@ public final class SourceTests {
         h.setBlock(pos.above(2), AllBlocks.SPOUT.get());
         var depot = (DepotBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(pos));
         var port = fluidAt(h, pos.above(2), Direction.UP);
-        depot.setHeldItem(CompactFacilities.BLANK.toStack());
+        depot.setHeldItem(ModItems.FLUID_SOURCE_BLANK.toStack());
         var bucket = new FluidStack(Fluids.LAVA, 1000);
         int[] supplied = {0};
         int[] milestone = {2500};
         h.succeedWhen(() -> {
             if (supplied[0] < 10_000_000) supplied[0] += port.fill(bucket, IFluidHandler.FluidAction.EXECUTE);
             var held = depot.getHeldItem();
-            Charge charge = held.get(CompactFacilities.CHARGE);
+            FluidSourceCharge charge = held.get(ModDataComponents.FLUID_SOURCE_CHARGE);
             if (charge != null && charge.fills() >= milestone[0]) {
                 LogUtils.getLogger().info("COMPACT_FACILITIES_LINE fills={} tick={} supplied_mB={}", charge.fills(), h.getTick(), supplied[0]);
                 milestone[0] += 2500;
             }
-            h.assertTrue(held.is(CompactFacilities.SOURCE_ITEM.get()), "The production workpiece is still under the spout");
+            h.assertTrue(held.is(ModItems.FLUID_SOURCE.get()), "The production workpiece is still under the spout");
             h.assertTrue(held.getCount() == 1 && charge != null && charge.complete() && charge.target() == 10000
                     && charge.fluid().getFluid() == Fluids.LAVA && supplied[0] == 10_000_000 && port.getFluidInTank(0).isEmpty(),
                 "Physical production did not account for exactly ten thousand buckets");
@@ -273,10 +284,10 @@ public final class SourceTests {
         h.setBlock(pos.above(2), AllBlocks.SPOUT.get());
         var depot = (DepotBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(pos));
         var port = fluidAt(h, pos.above(2), Direction.UP);
-        depot.setHeldItem(roundTrip(h, Charge.of(new FluidStack(Fluids.WATER, 1000), 9997, 10000).toItem()));
+        depot.setHeldItem(roundTrip(h, FluidSourceCharge.of(new FluidStack(Fluids.WATER, 1000), 9997, 10000).toItem()));
         port.fill(new FluidStack(Fluids.LAVA, 1000), IFluidHandler.FluidAction.EXECUTE);
         h.runAtTickTime(40, () -> {
-            h.assertTrue(depot.getHeldItem().get(CompactFacilities.CHARGE).fills() == 9997
+            h.assertTrue(depot.getHeldItem().get(ModDataComponents.FLUID_SOURCE_CHARGE).fills() == 9997
                 && port.getFluidInTank(0).getAmount() == 1000, "Mismatched fluid changed the held workpiece or the spout");
             port.drain(1000, IFluidHandler.FluidAction.EXECUTE);
         });
@@ -288,8 +299,8 @@ public final class SourceTests {
         });
         h.runAtTickTime(200, () -> {
             var item = depot.getHeldItem();
-            h.assertTrue(item.is(CompactFacilities.SOURCE_ITEM.get()) && item.getCount() == 1
-                && item.get(CompactFacilities.CHARGE).complete() && item.get(CompactFacilities.CHARGE).target() == 10000,
+            h.assertTrue(item.is(ModItems.FLUID_SOURCE.get()) && item.getCount() == 1
+                && item.get(ModDataComponents.FLUID_SOURCE_CHARGE).complete() && item.get(ModDataComponents.FLUID_SOURCE_CHARGE).target() == 10000,
                 "Stationary spout failed to finish the saved workpiece at its original target");
             h.assertTrue(supplied[0] == 4000 && port.getFluidInTank(0).getAmount() == 1000, "Final source consumed the spare bucket");
             h.succeed();
@@ -302,10 +313,10 @@ public final class SourceTests {
         h.setBlock(pos.above(2), AllBlocks.SPOUT.get());
         var depot = (DepotBlockEntity) h.getLevel().getBlockEntity(h.absolutePos(pos));
         var port = fluidAt(h, pos.above(2), Direction.UP);
-        depot.setHeldItem(CompactFacilities.BLANK.toStack());
+        depot.setHeldItem(ModItems.FLUID_SOURCE_BLANK.toStack());
         port.fill(new FluidStack(Fluids.WATER, 999), IFluidHandler.FluidAction.EXECUTE);
         h.runAtTickTime(30, () -> {
-            h.assertTrue(depot.getHeldItem().is(CompactFacilities.BLANK.get()) && port.getFluidInTank(0).getAmount() == 999,
+            h.assertTrue(depot.getHeldItem().is(ModItems.FLUID_SOURCE_BLANK.get()) && port.getFluidInTank(0).getAmount() == 999,
                 "A partial bucket started the water source");
             h.assertTrue(port.fill(new FluidStack(Fluids.WATER, 1), IFluidHandler.FluidAction.EXECUTE) == 1, "Could not top up the first bucket");
         });
@@ -313,8 +324,8 @@ public final class SourceTests {
             int fills = n;
             h.runAtTickTime(30 + 40L * fills, () -> {
                 var held = depot.getHeldItem();
-                var charge = held.get(CompactFacilities.CHARGE);
-                h.assertTrue(held.is(fills == 3 ? CompactFacilities.SOURCE_ITEM.get() : CompactFacilities.UNFINISHED.get())
+                var charge = held.get(ModDataComponents.FLUID_SOURCE_CHARGE);
+                h.assertTrue(held.is(fills == 3 ? ModItems.FLUID_SOURCE.get() : ModItems.INCOMPLETE_FLUID_SOURCE.get())
                     && held.getCount() == 1 && charge != null && charge.fills() == fills && charge.target() == 3
                     && charge.fluid().getFluid() == Fluids.WATER && port.getFluidInTank(0).isEmpty(), "Incorrect water fill " + fills);
                 if (fills == 2) depot.setHeldItem(roundTrip(h, held));
@@ -323,7 +334,7 @@ public final class SourceTests {
         }
         h.runAtTickTime(200, () -> {
             int remaining = port.getFluidInTank(0).getAmount();
-            h.assertTrue(depot.getHeldItem().is(CompactFacilities.SOURCE_ITEM.get()) && remaining == 1000, "A finished source took a fourth bucket");
+            h.assertTrue(depot.getHeldItem().is(ModItems.FLUID_SOURCE.get()) && remaining == 1000, "A finished source took a fourth bucket");
             var output = pos.east(2);
             placeItem(h, output, depot.getHeldItem().copy());
             for (Direction face : Direction.values()) {
@@ -337,7 +348,7 @@ public final class SourceTests {
 
     private static void pump(GameTestHelper h) {
         var pump = new BlockPos(3, 2, 3);
-        placeItem(h, pump.west(), Charge.of(new FluidStack(Fluids.WATER, 1000), 1, 1).toItem());
+        placeItem(h, pump.west(), FluidSourceCharge.of(new FluidStack(Fluids.WATER, 1000), 1, 1).toItem());
         h.setBlock(pump.east(), AllBlocks.FLUID_TANK.get());
         h.setBlock(pump, AllBlocks.MECHANICAL_PUMP.getDefaultState().setValue(PumpBlock.FACING, Direction.EAST));
         h.setBlock(pump.south(), AllBlocks.COGWHEEL.getDefaultState().setValue(RotatedPillarKineticBlock.AXIS, Direction.Axis.X));
