@@ -63,6 +63,7 @@ public final class ClientSmoke {
     private static final String PHOTO = WORLD + ".png";
     private static final String INVENTORY = WORLD + "-inventory.png";
     private static final String GOGGLES = WORLD + "-goggles.png";
+    private static final String CREATIVE_TAB = WORLD + "-creative-tab.png";
     private static final BlockPos EMPTY = new BlockPos(-2, 81, 0);
     private static final BlockPos HALF = EMPTY.east(2);
     private static final BlockPos LAVA = HALF.east(2);
@@ -260,6 +261,23 @@ public final class ClientSmoke {
             }
             case 16 -> {
                 if (!Files.isRegularFile(mc.gameDirectory.toPath().resolve("screenshots").resolve(GOGGLES))) return;
+                work = onServer(mc, player -> player.setGameMode(GameType.CREATIVE));
+                next();
+            }
+            case 17 -> {
+                if (!mc.gameMode.hasInfiniteItems()) return;
+                CreativeTabChecks.openAndCheck(mc, LANGUAGE);
+                next();
+            }
+            case 18 -> {
+                if (elapsed < 12) return;
+                Screenshot.grab(mc.gameDirectory, CREATIVE_TAB, mc.getMainRenderTarget(),
+                    message -> LogUtils.getLogger().info("Compact Facilities creative tab: {}", message.getString()));
+                next();
+            }
+            case 19 -> {
+                if (!Files.isRegularFile(mc.gameDirectory.toPath().resolve("screenshots").resolve(CREATIVE_TAB))) return;
+                mc.setScreen(null);
                 LogUtils.getLogger().info("COMPACT_FACILITIES_CLIENT_PASSED saved-world={} upgraded={} language={} jei={} goggles={} gallery={} inventory={}",
                     WORLD, !UPGRADE_WORLD.isEmpty(), LANGUAGE, Boolean.getBoolean("compact_facilities.verifyJei"), GOGGLES, PHOTO, INVENTORY);
                 next();

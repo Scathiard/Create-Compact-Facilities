@@ -6,6 +6,7 @@
   "compact_facilities.configuration.section.compact.facilities.server.toml.title": "Compact Facilities Server Config",
   "compact_facilities.configuration.requiredFills": "Fluid Source Spout Fills",
   "compact_facilities.configuration.requiredFills.tooltip": "Spout operations required for a new fluid source (1,000 mB each). Set to 0 to follow Create's Hose Pulley threshold.",
+  "itemGroup.compact_facilities": "Create: Compact Facilities",
   "item.compact_facilities.compact_fluid_source_blank": "Empty Compact Fluid Source",
   "item.compact_facilities.incomplete_compact_fluid_source": "Incomplete Compact Fluid Source",
   "block.compact_facilities.compact_fluid_source": "Compact Fluid Source",

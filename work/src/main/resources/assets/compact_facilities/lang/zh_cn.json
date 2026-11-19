@@ -6,6 +6,7 @@
   "compact_facilities.configuration.section.compact.facilities.server.toml.title": "紧凑设施服务端设置",
   "compact_facilities.configuration.requiredFills": "流体源注液次数",
   "compact_facilities.configuration.requiredFills.tooltip": "新流体源所需的注液器加工次数（每次 1,000 mB）。设为 0 时跟随机械动力软管滑轮门槛",
+  "itemGroup.compact_facilities": "机械动力：紧凑设施",
   "item.compact_facilities.compact_fluid_source_blank": "空的紧凑流体源",
   "item.compact_facilities.incomplete_compact_fluid_source": "未完成的紧凑流体源",
   "block.compact_facilities.compact_fluid_source": "紧凑流体源",

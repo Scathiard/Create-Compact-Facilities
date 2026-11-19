@@ -22,8 +22,8 @@ public final class CompactFacilities {
         ModBlockEntities.register(bus);
         ModDataComponents.register(bus);
         ModIngredientTypes.register(bus);
+        ModCreativeContents.register(bus);
         ServerConfig.register(mod);
         bus.addListener(FluidSourceEntity::registerCapabilities);
-        bus.addListener(ModCreativeContents::populate);
     }
 }
