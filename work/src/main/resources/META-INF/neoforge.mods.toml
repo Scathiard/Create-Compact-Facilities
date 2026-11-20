@@ -6,6 +6,7 @@ license = "All Rights Reserved except where separately noted."
 modId = "compact_facilities"
 version = "${modVersion}"
 displayName = "Create: Compact Facilities"
+logoFile = "logo.png"
 authors = "Scathiard"
 description = "A Create add-on for Minecraft 1.21.1 NeoForge. Shrink whole bulk-supply installations into a single block—without discounting a single part or resource."
 
