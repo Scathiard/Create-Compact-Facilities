@@ -1,6 +1,6 @@
 # 更新日志 / Changelog
 
-## 未发布 / Unreleased
+## 0.0.1
 
 ### 简体中文
 
