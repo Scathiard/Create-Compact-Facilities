@@ -12,4 +12,4 @@ The **Create: Compact Facilities** creative tab offers an empty workpiece and an
 
 ## License
 
-The project's original code and assets are licensed under MIT. Assets from CreatePrism retain their original copyright notice. [MIT license](LICENSE) · [CreatePrism license](work/src/main/resources/META-INF/licenses/LICENSE-CreatePrism.txt)
+This project is licensed under the [MIT License](LICENSE).

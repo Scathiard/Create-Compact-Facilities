@@ -12,4 +12,4 @@
 
 ## 许可证
 
-本项目的原创代码和资源采用 MIT 许可证。CreatePrism 素材保留原作者的版权声明。[MIT 许可证](LICENSE) · [CreatePrism 许可声明](work/src/main/resources/META-INF/licenses/LICENSE-CreatePrism.txt)
+本项目采用 [MIT 许可证](LICENSE)。
