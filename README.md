@@ -9,3 +9,7 @@
 只要能在世界中放出源方块，就能用来制作流体源，例如水、熔岩、蜂蜜和巧克力。Create 的药水没有源方块，无法注入。**水固定 3 桶，其他流体默认 10,000 桶**。在 `compact_facilities-server.toml` 中调高或调低 `requiredFills`，可以改变新毛坯的非水注液次数。设为 `0` 时跟随软管滑轮门槛。将 Create 的 `hosePulleyBlockThreshold` 设为 `-1` 会暂停注液和供液，已有绑定会保留。
 
 创造栏的「机械动力：紧凑设施」提供空壳和未绑定的成品。放下成品，拿装有合格流体的容器右键即可选定或更换流体，用空桶右键即可清空。创造模式会保留手里的容器。生存模式下，已放置的成品保持原有绑定。
+
+## 许可证
+
+本项目的原创代码和资源采用 MIT 许可证。CreatePrism 素材保留原作者的版权声明。[MIT 许可证](LICENSE) · [CreatePrism 许可声明](work/src/main/resources/META-INF/licenses/LICENSE-CreatePrism.txt)

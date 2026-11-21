@@ -1,6 +1,6 @@
 modLoader = "javafml"
 loaderVersion = "[4,)"
-license = "All Rights Reserved except where separately noted."
+license = "MIT"
 
 [[mods]]
 modId = "compact_facilities"
