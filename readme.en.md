@@ -12,4 +12,4 @@ The **Create: Compact Facilities** creative tab offers an empty workpiece and an
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+No license is granted for project-owned code and assets in this version. All rights reserved. Third-party materials remain subject to their own licenses and notices.
